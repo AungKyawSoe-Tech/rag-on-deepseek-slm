@@ -1,21 +1,18 @@
 # Import
 
 import os
-
 from langchain_community.document_loaders import PDFPlumberLoader  
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_experimental.text_splitter import SemanticChunker  
 from langchain_community.embeddings import HuggingFaceEmbeddings  
 from langchain_community.vectorstores import FAISS  
 from langchain_community.llms import Ollama
-
-from langchain.prompts import PromptTemplate
-from langchain.chains.llm import LLMChain
-from langchain.chains.combine_documents.stuff import StuffDocumentsChain
-from langchain.chains import RetrievalQA
-
-from langchain_huggingface import HuggingFaceEmbeddings
-
+from langchain_community.chat_models import ChatOpenAI
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.documents import Document
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain.chains import create_retrieval_chain
 import streamlit as st  
 
 # color palette
@@ -84,8 +81,8 @@ st.title("Build a RAG System with DeepSeek R1 & Ollama")
 
 loaded_documents = []
 
-load_text_documents('../Documents', loaded_documents)
-load_pdf_documents('../Documents', loaded_documents)
+load_text_documents('Documents', loaded_documents)
+load_pdf_documents('Documents', loaded_documents)
 
 doc_counter = 0
 
@@ -122,25 +119,29 @@ Question: {question}
 
 Answer:  
 """  
-QA_CHAIN_PROMPT = PromptTemplate.from_template(prompt)  
+QA_CHAIN_PROMPT = ChatPromptTemplate.from_template(prompt)  
 
-# Chain 1: Generate answers  
-llm_chain = LLMChain(llm=llm, prompt=QA_CHAIN_PROMPT)  
+# Step 1: Define the prompt for combining documents
 
-# Chain 2: Combine document chunks  
-document_prompt = PromptTemplate(  
-    template="Context:\ncontent:{page_content}\nsource:{source}",  
-    input_variables=["page_content", "source"]  
-)  
+# This is the main prompt that wraps all documents
+prompt = ChatPromptTemplate.from_messages([
+    ("system", "Summarize the following documents:\n\n{context}")
+])
 
-# Final RAG pipeline  
-qa = RetrievalQA(  
-    combine_documents_chain=StuffDocumentsChain(  
-        llm_chain=llm_chain,  
-        document_prompt=document_prompt  
-    ),  
-    retriever=retriever  
-)  
+document_prompt = ChatPromptTemplate(
+    template="Context:\ncontent:{page_content}\nsource:{source}",
+    input_variables=["page_content", "source"],
+    messages=[
+          ("system", "You are a helpful AI assistant."),
+          ("human", "{question}"),
+      ]
+)
+
+# Step 2: Create the document stuffing chain
+stuff_chain = create_stuff_documents_chain(llm=llm, prompt=prompt, document_prompt=document_prompt)
+
+# Step 3: Compose the RetrievalQA chain using LCEL
+retrieval_chain = create_retrieval_chain(retriever, stuff_chain)
 
 # Streamlit UI  
 # May be next step is to make this model run as a server and send queries wih curl
