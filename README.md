@@ -16,20 +16,31 @@ pip install faiss-cpu;
 
 ## Populating with data
 
-Populate the folder \\wsl.localhost\Ubuntu\home\user\Documents with books, while the cloned repo is here \\wsl.localhost\Ubuntu\home\user\SLM-as-agent, run as "python3 rag/train.py"
+Populate the folder \\wsl.localhost\Ubuntu\home\user\Documents with books, while the cloned repo is here \\wsl.localhost\Ubuntu\home\user\SLM-as-agent, run as "python3 train.py"
+
+
+## How RAG improves answer
+
+The data that is fed to RAG database to complement the data can be seen below:
+
+![NewInfoAddedViaRAG](Images/NewInfoAddedViaRAG.png)
+
+And you can see how RAG improves the answer, you can see that AnswerFromRAG is more up to date than the original.
+
+![AnswerFromRAG](Images/AnswerFromRAG.png)
+
+![AnswerWithoutRAG](Images/AnswerWithoutRAG.png)
 
 
 
-# Running GPT-OSS-20b SLM locally!
+## Running GPT-OSS-20b SLM locally!
 
-## Introduction
-
-I want to use a SLM, **GPT-OSS-20b** from OpenAI so that when I use VS Code. How can I use this locally stored pre-trained LLM instead of GitHub CoPilot?
+We will run a SLM, **Deepseek-r1:1.5b** from OpenAI so that when I use VS Code. How can I use this locally stored pre-trained LLM instead of GitHub CoPilot?
 
 
 ## Create files and folders
 
-We can run a local **20 B GPT‑OSS** model (or any LLM that runs on your machine) and hook it into VS Code instead of using cloud‑based GitHub Copilot.
+We can run a local **Deepseek-r1:1.5b** model (or any LLM that runs on your machine) and hook it into VS Code instead of using cloud‑based GitHub Copilot.
 
 The trick is to expose the model as an API that looks like OpenAI’s endpoint, then point a VS Code extension at that local endpoint. Below are two practical ways to do this:
 

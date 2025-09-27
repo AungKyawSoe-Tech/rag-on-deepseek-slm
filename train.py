@@ -7,13 +7,13 @@ from langchain_experimental.text_splitter import SemanticChunker
 from langchain_community.embeddings import HuggingFaceEmbeddings  
 from langchain_community.vectorstores import FAISS  
 from langchain_community.llms import Ollama
-from langchain_community.chat_models import ChatOpenAI
-from langchain_core.runnables import RunnablePassthrough
+#from langchain_community.chat_models import ChatOpenAI
+from langchain_core.runnables import RunnableMap, RunnablePassthrough
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.documents import Document
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains import create_retrieval_chain
-import streamlit as st  
+from langchain_core.output_parsers import StrOutputParser
 
 # color palette
 primary_color = "#1E90FF"
@@ -37,45 +37,7 @@ def load_pdf_documents(directory, documents):
             with open(os.path.join(directory, filename), 'r') as file:
                 documents.append(PDFPlumberLoader(directory + '/' + filename).load())
 
-
-# Custom CSS
-st.markdown(f"""
-    <style>
-    .stApp {{
-        background-color: {background_color};
-        color: {text_color};
-    }}
-    .stButton>button {{
-        background-color: {primary_color};
-        color: white;
-        border-radius: 5px;
-        border: none;
-        padding: 10px 20px;
-        font-size: 16px;
-    }}
-    .stTextInput>div>div>input {{
-        border: 2px solid {primary_color};
-        border-radius: 5px;
-        padding: 10px;
-        font-size: 16px;
-    }}
-    .stFileUploader>div>div>div>button {{
-        background-color: {secondary_color};
-        color: white;
-        border-radius: 5px;
-        border: none;
-        padding: 10px 20px;
-        font-size: 16px;
-    }}
-    </style>
-""", unsafe_allow_html=True)
-
-
-
 # Main()  
-
-# Streamlit app title
-st.title("Build a RAG System with DeepSeek R1 & Ollama")
 
 # Loading documents
 
@@ -121,36 +83,26 @@ Answer:
 """  
 QA_CHAIN_PROMPT = ChatPromptTemplate.from_template(prompt)  
 
-# Step 1: Define the prompt for combining documents
-
-# This is the main prompt that wraps all documents
-prompt = ChatPromptTemplate.from_messages([
-    ("system", "Summarize the following documents:\n\n{context}")
+# Step 1: Define the prompt
+rag_prompt = ChatPromptTemplate.from_messages([
+    ("system", "You are a helpful AI assistant."),
+    ("human", "{question}\n\nContext:\n{context}")
 ])
 
-document_prompt = ChatPromptTemplate(
-    template="Context:\ncontent:{page_content}\nsource:{source}",
-    input_variables=["page_content", "source"],
-    messages=[
-          ("system", "You are a helpful AI assistant."),
-          ("human", "{question}"),
-      ]
+# Step 2: Create the LCEL chain
+rag_chain = (
+    RunnableMap({
+        "context": retriever | (lambda docs: "\n\n".join([doc.page_content for doc in docs])),
+        "question": RunnablePassthrough()
+    })
+    | rag_prompt
+    | llm
+    | StrOutputParser()
 )
 
-# Step 2: Create the document stuffing chain
-stuff_chain = create_stuff_documents_chain(llm=llm, prompt=prompt, document_prompt=document_prompt)
+# Step 3: Run the chain
+query = "Who is Dr. Judea Pearl and what did he warn ML people about in which book?"
+response = rag_chain.invoke(query)
 
-# Step 3: Compose the RetrievalQA chain using LCEL
-retrieval_chain = create_retrieval_chain(retriever, stuff_chain)
-
-# Streamlit UI  
-# May be next step is to make this model run as a server and send queries wih curl
-
-print("Asking RAG a question:")
-
-user_input = st.text_input("Ask your RAG a question:")  
-
-if user_input:  
-    with st.spinner("Thinking..."):  
-        response = qa(user_input)["result"]  
-        st.write(response) 
+# Step 4: Output
+print(response)
