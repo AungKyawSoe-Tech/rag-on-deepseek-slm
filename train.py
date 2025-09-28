@@ -101,7 +101,7 @@ rag_chain = (
 )
 
 # Step 3: Run the chain
-query = "Who is Dr. Judea Pearl and what did he warn ML people about in which book?"
+query = "You are a Machine Learning Expert who gives only factual answers. I have 3 questions:(1) Who is Dr. Judea Pearl? What did he warn ML people about in which book? What are his books?(2) Who is Chip Huyen? What are her books? (3) Did Chip Huyen quote Dr. Pearl in one of her books? What is the title of the book?"
 response = rag_chain.invoke(query)
 
 # Step 4: Output
